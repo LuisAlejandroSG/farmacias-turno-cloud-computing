@@ -274,10 +274,18 @@ async def obtener_estadisticas():
 async def update_database():
     """Descarga datos del MINSAL y actualiza la base de datos local"""
     url = "https://midas.minsal.cl/farmacia_v2/WS/getLocalesTurnos.php"
-    
+    # Añadimos un Header para que el MINSAL no nos bloquee
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
     try:
         # 1. Obtener datos externos
-        response = requests.get(url)
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        # Si el servidor del MINSAL no responde 200, lanzamos error claro
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"El servidor del MINSAL respondió con error: {response.status_code}")
+            
         all_data = response.json()
         
         # 2. Filtrar ciudades del caso de estudio (Coronel, Lota, Arauco)
