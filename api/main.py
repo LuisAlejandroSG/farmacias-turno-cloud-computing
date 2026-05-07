@@ -7,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 from datetime import time
+import requests
 
 # ============ CONFIGURACIÓN ============
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://farmacia_user:SecurePass2024!@postgres:5432/farmacias_db")
@@ -268,6 +269,65 @@ async def obtener_estadisticas():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo estadísticas: {str(e)}")
+
+@app.post("/api/update-data")
+async def update_database():
+    """Descarga datos del MINSAL y actualiza la base de datos local"""
+    url = "https://midas.minsal.cl/farmacia_v2/WS/getLocalesTurnos.php"
+    
+    try:
+        # 1. Obtener datos externos
+        response = requests.get(url)
+        all_data = response.json()
+        
+        # 2. Filtrar ciudades del caso de estudio (Coronel, Lota, Arauco)
+        ciudades_objetivo = ["CORONEL", "LOTA", "ARAUCO"]
+        farmacias_filtradas = [
+            f for f in all_data 
+            if f['comuna_nombre'].upper() in ciudades_objetivo
+        ]
+        
+        if not farmacias_filtradas:
+            return {"status": "warning", "message": "No se encontraron farmacias para las comunas objetivo"}
+
+        # 3. Conexión a DB y actualización
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Limpiamos la tabla para tener solo datos frescos (Resguardo seguro y eficiente)
+        cur.execute("TRUNCATE TABLE farmacias RESTART IDENTITY CASCADE;")
+        
+        # 4. Insertar nuevos datos
+        # Mapeamos los campos del JSON del MINSAL a tu tabla local
+        query = """
+            INSERT INTO farmacias (
+                nombre, ciudad, direccion, telefonico, 
+                horario_apertura, horario_cierre, domingo_turno
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        for f in farmacias_filtradas:
+            cur.execute(query, (
+                f['local_nombre'],
+                f['comuna_nombre'].capitalize(),
+                f['local_direccion'],
+                f['local_telefono'],
+                f['funcionamiento_hora_apertura'],
+                f['funcionamiento_hora_cierre'],
+                True if f['funcionamiento_dia'].lower() == 'domingo' else False
+            ))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {
+            "status": "success", 
+            "message": f"Se actualizaron {len(farmacias_filtradas)} registros localmente."
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en la actualización: {str(e)}")
 
 # ============ MANEJO DE ERRORES ============
 @app.get("/docs")
