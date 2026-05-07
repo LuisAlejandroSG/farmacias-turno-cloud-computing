@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: farmacias_db
+    environment:
+      POSTGRES_DB: farmacias_db
+      POSTGRES_USER: farmacia_user
+      POSTGRES_PASSWORD: SecurePass2024!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - farmacias_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U farmacia_user -d farmacias_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  farmacias_network:
+    driver: bridge
