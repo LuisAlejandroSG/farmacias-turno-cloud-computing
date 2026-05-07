@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
+from datetime import time
 
 # ============ CONFIGURACIÓN ============
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://farmacia_user:SecurePass2024!@postgres:5432/farmacias_db")
