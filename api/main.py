@@ -32,8 +32,8 @@ class Farmacia(BaseModel):
     ciudad: str
     direccion: Optional[str]
     telefonico: Optional[str]
-    horario_apertura: Optional[str]
-    horario_cierre: Optional[str]
+    horario_apertura: time
+    horario_cierre: time
     domingo_turno: bool
     esta_activa: bool
 
