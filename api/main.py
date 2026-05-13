@@ -8,6 +8,9 @@ import os
 from datetime import datetime, time
 import requests
 
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://farmacia_user:SecurePass2024!@postgres:5432/farmacias_db")
+
+
 app = FastAPI(
     title="API Farmacias de Turno",
     description="API para consultar y gestionar farmacias de turno (Coronel, Lota, Arauco, Concepción)",
